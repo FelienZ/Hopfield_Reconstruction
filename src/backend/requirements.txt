@@ -4,3 +4,7 @@ python-multipart>=0.0.6
 numpy>=1.24.0
 opencv-python-headless>=4.8.0
 Pillow>=10.0.0
+scikit-image>=0.21.0
+scipy>=1.10.0
+gunicorn
+pydantic
