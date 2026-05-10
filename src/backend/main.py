@@ -5,7 +5,9 @@ import pickle
 import os
 import sys
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Agar Python bisa membaca folder 'core'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
 
 from core.hopfield import mchnn_matching
 from core.utils import preprocess_image, array_to_base64
@@ -16,7 +18,8 @@ app_state = {
     "E": None
 }
 
-MODEL_PATH = r"a:\JST_UAS\models\mchnn_model_final.pkl"
+# [PERBAIKAN 1] Gunakan Relative Path yang aman untuk Linux (Render) dan Windows lokal
+MODEL_PATH = os.path.join(BASE_DIR, "models", "mchnn_model_final.pkl")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,9 +50,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# [PERBAIKAN 2] Buka akses CORS untuk Vercel nanti
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "*"], # Ganti "*" dengan URL Vercel-mu nanti jika ingin lebih aman
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,7 +75,6 @@ async def recognize_fingerprint(image: UploadFile = File(...)):
         matched_id, output_pattern, initial_se = mchnn_matching(bipolar_vector, W, E)
         
         # Affinity Tolerance Check
-        # initial_se is negative. A value greater than E[0] * 0.70 means it's too close to 0 (bad affinity)
         ENERGY_TOLERANCE = ideal_e * 0.70 if ideal_e is not None else float('-inf')
         
         status = "AUTHORIZED"
@@ -79,7 +82,6 @@ async def recognize_fingerprint(image: UploadFile = File(...)):
         
         if matched_id == "Access Denied" or initial_se > ENERGY_TOLERANCE:
             status = "DENIED"
-            # Return original pattern base64 if denied, or some default
             base64_reconstructed = array_to_base64(bipolar_vector) if output_pattern is None else array_to_base64(output_pattern)
             converged_energy = None
         else:
